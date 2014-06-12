@@ -68,4 +68,4 @@ class PhotoListSerializer(PhotoSerializer):
         fields = ('id', 'owner', 'name')
 
 
-#Esto es para ver un commit de prueba, y ahora el segundo
+#Esto es para ver un commit de prueba, y ahora el tercero con push
