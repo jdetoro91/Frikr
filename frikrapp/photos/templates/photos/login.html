@@ -1,0 +1,17 @@
+{% extends 'photos/base.html' %}
+
+{% block head_title %}
+Frikr Login
+{% endblock %}
+
+{% block body_content %}
+    <h1>Entra en Frikr</h1>
+    {% for error in errors %}
+        <p>{{ error }}</p>
+    {% endfor %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <p><button type="submit">Entrar</button></p>
+    </form>
+{% endblock %}
