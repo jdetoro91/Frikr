@@ -24,6 +24,7 @@ urlpatterns = patterns('',
     # Photo API URLs
     url(r'^api/1.0/photos/$', api.PhotoListAPI.as_view()),
     url(r'^api/1.0/photos/(?P<pk>[0-9]+)$', api.PhotoDetailAPI.as_view()),
+    url(r'^api/1.0/photos/upload$', api.PhotoUploadAPI.as_view()),
 
 )
 

@@ -43,3 +43,37 @@ class Photo(models.Model):
         for badword in BADWORDS:
             if badword in self.description:
                 raise ValidationError(badword + u'no está permitido')
+
+
+
+
+class File(models.Model):
+
+    path = models.FileField(upload_to="uploads")
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now_add=True, auto_now=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -94,19 +94,13 @@ LICENSES = (
     ('CC4', 'Creative Commons 4'),
 )
 
+# listado de tacos
 BADWORDS = (u'afinabanjos', u'mascachapas', u'abrazafarolas')
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+# configuracion de rest framework
+REST_FRAMEWORK = {
+    'PAGINATE_BY' : 5,
+    'MAX_PAGINATE_BY' : 10,
+    'PAGINATE_BY_PARAM' : 'page_size'
+}

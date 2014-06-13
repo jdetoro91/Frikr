@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
 from django.contrib.auth.models import User
-from serializers import UserSerializer, PhotoSerializer, PhotoListSerializer
+from serializers import UserSerializer, PhotoSerializer, PhotoListSerializer, FileSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from models import Photo
+from models import Photo, VISIBILITY_PUBLIC, File
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from permissions import UserPermission
+from django.db.models import Q
+from django.core.mail import send_mail
 
 
 class UserListAPI(APIView):
+
+    permission_classes = (UserPermission,)
 
     def get(self, request):
         users = User.objects.all()
@@ -29,36 +35,67 @@ class UserListAPI(APIView):
 
 class UserDetailAPI(APIView):
 
+    permission_classes = (UserPermission,)
+
+
     def get(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+        if request.user.is_superuser or request.user == user:
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
     def put(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        serializer = UserSerializer(user, data=request.DATA)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        if request.user.is_superuser or request.user == user:
+            serializer = UserSerializer(user, data=request.DATA)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
     def delete(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if request.user.is_superuser or request.user == user:
+            user.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 
-class PhotoListAPI(ListCreateAPIView):
+class PhotoAPIQueryset:
+
+
+    def get_queryset(self):
+        """
+        Devuelve un queryset en función de varios criterios
+        """
+        if self.request.user.is_superuser:
+            return Photo.objects.all()
+        elif self.request.user.is_authenticated():
+            return Photo.objects.filter(Q(visibility=VISIBILITY_PUBLIC) | Q(owner=self.request.user))
+        else:
+            return Photo.objects.filter(visibility=VISIBILITY_PUBLIC)
+
+
+
+
+class PhotoListAPI(PhotoAPIQueryset, ListCreateAPIView):
     """
     Implementa el API de listado (GET) y creación (POST) de fotos
     (Sí, en serio)
     """
     queryset = Photo.objects.all()
     serializer_class = PhotoListSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
 
 
     def get_serializer_class(self):
@@ -69,15 +106,30 @@ class PhotoListAPI(ListCreateAPIView):
         #return PhotoSerializer if self.request.method == "POST" else self.serializer_class
 
 
-class PhotoDetailAPI(RetrieveUpdateDestroyAPIView):
+
+    def pre_save(self, obj):
+        """
+        Asigna la autoría de la foto al usuario autenticado al crearla
+        """
+        obj.owner = self.request.user
+
+
+class PhotoDetailAPI(PhotoAPIQueryset, RetrieveUpdateDestroyAPIView):
     """
     Implementa el API de detalle (GET), actualización (PUT), y borrado (DELETE)
     """
     queryset = Photo.objects.all()
     serializer_class = PhotoSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,)
 
 
 
+
+class PhotoUploadAPI(CreateAPIView):
+
+    queryset = File.objects.all()
+    serializer_class = FileSerializer
+    permission_classes = (IsAuthenticated,)
 
 
 
